@@ -1,3 +1,5 @@
+// Based on https://github.com/koji/npm-package-template
+
 import { terser } from "rollup-plugin-terser";
 import pluginTypescript from "@rollup/plugin-typescript";
 import pluginCommonjs from "@rollup/plugin-commonjs";
