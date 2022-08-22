@@ -1,77 +1,72 @@
 import options from "./options";
 import styles from "./styles";
 
-export default function init() {
-    const article = document.querySelector('article')
+export default function init(userOptions: {
+  container?: string;
+  fnAnchor?: string;
+  refAnchor?: string;
+  text?: string;
+  background?: string;
+}): void {
+  const config = { ...options, ...userOptions };
 
-    if (!article) throw Error('Content container not found');
+  const { container, fnAnchor, refAnchor, text, background } = config;
+  styles(text, background);
 
-    const ni = document.createNodeIterator(article, NodeFilter.SHOW_TEXT)
+  const fnRE = new RegExp(`${fnAnchor}(\\d)`, "g");
+  const refRE = new RegExp(`${refAnchor}(\\d)`, "g");
+  console.log(fnRE);
+  const article = document.querySelector(container);
 
-    if (!ni.referenceNode) return;
+  if (!article) throw Error("Content container not found");
 
-    let current = ni.nextNode()
+  const ni = document.createNodeIterator(article, NodeFilter.SHOW_TEXT);
 
-    let nodes = []
+  if (!ni.referenceNode) throw Error("Reference node not found");
 
-    while (current) {
-        const str = ni.referenceNode.textContent;
+  let current;
 
-        if (typeof str !== "string" || !str) throw Error('Nothing to match');
+  let nodes = [];
 
-        if (/>>/.test(str)) {
+  while ((current = ni.nextNode())) {
+    const parentEl = ni.referenceNode.parentElement;
 
-            const matchResults = str.match(/>>(\d)/);
-            
-            if (matchResults) {
-                
-                const [whole, group] = matchResults;
-                const extract = str.replace(/>>\d/, "")
-                const fn = document.createElement('a')
-                const sup = document.createElement('sup')
-                fn.setAttribute('href', `#${group}`)
-                sup.textContent = group;
-                fn.setAttribute('style', 'padding: 5px')
-                fn.classList.add('footnote')
-                fn.id = `ref-${group}`;
-                fn.append(sup)
-                ni.referenceNode.parentElement && ni.referenceNode.parentElement.append(fn)
+    const str = ni.referenceNode.textContent;
+    if (!parentEl) return;
 
-                ni.referenceNode.textContent = extract;
+    // console.log(str, current);
 
+    if (typeof str !== "string" || !str) throw Error("Nothing to match");
 
-                nodes.push(ni.referenceNode)
-            }
-        }
-
-        if (/<</.test(ni.referenceNode.textContent)) {
-
-            const t = ni.referenceNode.textContent.match(/<<(\d)/, "FOOTNOTE $1")[1]
-            const extract = ni.referenceNode.textContent.replace(/<<\d/, "")
-
-
-            const reference = ni.referenceNode.parentElement.textContent.replace(/<<\d/, "");
-            document.getElementById(`ref-${t}`).setAttribute('data-reference', reference)
-            const fn = document.createElement('a')
-            const sup = document.createElement('sup')
-            fn.setAttribute('href', `#ref-${t}`)
-            sup.textContent = t;
-            fn.setAttribute('style', 'padding: 5px')
-            fn.id = t;
-            fn.append(sup)
-            ni.referenceNode.parentElement.prepend(fn)
-
-            ni.referenceNode.textContent = extract;
-
-
-        }
-
-        current = ni.nextNode()
+    if (fnRE.test(str)) {
+      const transformedText = parentEl?.innerText.replace(
+        fnRE,
+        "<a class='footnote' id='$1' href='#ref-$1'><sup>$1</sup></a>"
+      );
+      parentEl.innerHTML = transformedText;
     }
 
+    if (refRE.test(str)) {
+      // Need to encode/decode html entities in config
+      const transformedText = parentEl.innerHTML.replaceAll(
+        /&lt;&lt;(\d)/g,
+        '<a href="#$1" id="ref-$1">$1</a>'
+      );
+      console.log(transformedText);
+      parentEl.innerHTML = transformedText;
+      const matches = str.match(refRE);
 
-    const style = document.createElement('style')
-    style.textContent = styles;
-    document.head.append(style)
-    console.log(nodes)
+      matches.forEach((match) => {
+        const [num] = /\d/.exec(match);
+
+        const span = document.createElement("span");
+        span.setAttribute("class", "reference-preview");
+        span.innerHTML = parentEl.innerHTML.replace(num + " ", "");
+
+        document.getElementById(num)?.append(span);
+      });
+    }
+    nodes.push(current);
+  }
+  console.log(nodes);
 }
