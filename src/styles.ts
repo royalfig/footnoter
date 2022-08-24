@@ -1,26 +1,66 @@
-const styles = (text: string, background: string): void => {
-  const styles = `.footnote {position:relative} 
- .reference-preview {
-	position: absolute;
-	opacity: 0;
-	bottom: -2em;
-	left: 0;
-	transform: translateY(100%);
-	pointer-events: none;
-	background-color: ${background};
-	color: ${text};
-	padding: 1em;
-	border-radius: 9px;
-	box-shadow: 2px 2px 5px 10px rgb(0 0 0 / .75), 5px 5px 2rem 15px rgb(0 0 0 / .35);
-	width: 50vw;
-	font-size: 15px;
-	transition: .4s;
+const styles = (
+  text: string,
+  background: string,
+  width: number,
+  left: number,
+  right: number
+): void => {
+  const styles = `
+    body {
+    }
+	.footnote {
+		font-size: 12px;
+		text-decoration: none;
+        border-radius: 50%;
+        padding: 0 4px;
+        font-variant-numeric: tabular-nums;
+        left: -4px;
+        font-weight: 700;
+        vertical-align: text-top;
+        color: inherit;
+        scroll-padding: 30px;
+	}
 
- }
-   
- .footnote:hover .reference-preview {
-	opacity: 1;
- }
+    :target {
+        margin-top: 1em;
+    }
+
+    
+
+    .footnote:hover {
+        background: rgba(0 0 0 / .15)
+    }
+
+	.reference-preview {
+		position: absolute;
+		opacity: 0;
+		transform: translateY(-1rem);
+		left: 0;
+        font-weight: 400;
+		
+		pointer-events: none;
+		padding: 3rem .5rem;
+		width: ${width}px;
+		transition: .4s;
+		background: linear-gradient(to top, transparent, ${background},  ${background}, transparent);
+		
+
+	}
+
+	.reference-content {
+		font-size: 15px;
+		background-color: ${background};
+		color: ${text};
+		border-radius: 9px;
+		padding: 1em;
+		box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22);
+
+
+	}
+	
+	.footnote:hover .reference-preview {
+		opacity: 1;
+	}
  
    `;
   const style = document.createElement("style");
