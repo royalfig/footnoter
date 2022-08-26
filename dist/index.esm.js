@@ -1,5 +1,3 @@
-'use strict';
-
 const options = {
     container: "article",
     fnAnchor: ">>",
@@ -209,4 +207,4 @@ function init(userOptions) {
     }
 }
 
-module.exports = init;
+export { init as default };

@@ -1,119 +1,36 @@
-// Based on https://github.com/koji/npm-package-template
-
-import { terser } from 'rollup-plugin-terser'
-import pluginTypescript from '@rollup/plugin-typescript'
-import pluginCommonjs from '@rollup/plugin-commonjs'
-import pluginNodeResolve from '@rollup/plugin-node-resolve'
-import { babel } from '@rollup/plugin-babel'
-import * as path from 'path'
+import resolve from '@rollup/plugin-node-resolve'
+import commonjs from '@rollup/plugin-commonjs'
+import typescript from '@rollup/plugin-typescript'
 import pkg from './package.json'
 
-const moduleName = pkg.name.replace(/^@.*\//, '')
-const inputFileName = 'src/index.ts'
-const author = pkg.author
-const banner = `
-  /**
-   * @license
-   * author: ${author}
-   * ${moduleName}.js v${pkg.version}
-   * Released under the ${pkg.license} license.
-   */
-`
-console.log(banner)
 export default [
+  // browser-friendly UMD build
   {
-    input: inputFileName,
-    output: [
-      {
-        name: moduleName,
-        file: pkg.browser,
-        format: 'iife',
-        sourcemap: 'inline',
-        banner
-      },
-      {
-        name: moduleName,
-        file: pkg.browser.replace('.js', '.min.js'),
-        format: 'iife',
-        sourcemap: 'inline',
-        banner,
-        plugins: [terser()]
-      }
-    ],
+    input: 'src/index.ts',
+    output: {
+      name: 'footnoter',
+      file: pkg.browser,
+      format: 'umd'
+    },
     plugins: [
-      pluginTypescript(),
-      pluginCommonjs({
-        extensions: ['.js', '.ts']
-      }),
-      babel({
-        babelHelpers: 'bundled',
-        configFile: path.resolve(__dirname, '.babelrc.js')
-      }),
-      pluginNodeResolve({
-        browser: true
-      })
+      resolve(),
+      commonjs(),
+      typescript({ tsconfig: './tsconfig.json' })
     ]
   },
 
-  // ES
+  // CommonJS (for Node) and ES module (for bundlers) build.
+  // (We could have three entries in the configuration array
+  // instead of two, but it's quicker to generate multiple
+  // builds from a single configuration where possible, using
+  // an array for the `output` option, where we can specify
+  // `file` and `format` for each target)
   {
-    input: inputFileName,
+    input: 'src/index.ts',
     output: [
-      {
-        file: pkg.module,
-        format: 'es',
-        sourcemap: 'inline',
-        banner,
-        exports: 'named'
-      }
+      { file: pkg.main, format: 'cjs' },
+      { file: pkg.module, format: 'es' }
     ],
-    external: [
-      ...Object.keys(pkg.dependencies || {}),
-      ...Object.keys(pkg.devDependencies || {})
-    ],
-    plugins: [
-      pluginTypescript(),
-      pluginCommonjs({
-        extensions: ['.js', '.ts']
-      }),
-      babel({
-        babelHelpers: 'bundled',
-        configFile: path.resolve(__dirname, '.babelrc.js')
-      }),
-      pluginNodeResolve({
-        browser: false
-      })
-    ]
-  },
-
-  // CommonJS
-  {
-    input: inputFileName,
-    output: [
-      {
-        file: pkg.main,
-        format: 'cjs',
-        sourcemap: 'inline',
-        banner,
-        exports: 'default'
-      }
-    ],
-    external: [
-      ...Object.keys(pkg.dependencies || {}),
-      ...Object.keys(pkg.devDependencies || {})
-    ],
-    plugins: [
-      pluginTypescript(),
-      pluginCommonjs({
-        extensions: ['.js', '.ts']
-      }),
-      babel({
-        babelHelpers: 'bundled',
-        configFile: path.resolve(__dirname, '.babelrc.js')
-      }),
-      pluginNodeResolve({
-        browser: false
-      })
-    ]
+    plugins: [typescript({ tsconfig: './tsconfig.json' })]
   }
 ]
