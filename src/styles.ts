@@ -61,6 +61,10 @@ const styles = (
 	.footnote:hover .reference-preview {
 		opacity: 1;
 	}
+
+  .reference-back {
+    text-decoration: none;
+  }
  
    `;
   const style = document.createElement("style");

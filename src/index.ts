@@ -1,5 +1,7 @@
 import options from "./options";
 import styles from "./styles";
+import createFn from "./createFn";
+import createRef from "./createRef";
 
 export default function init(userOptions: {
   container?: string;
@@ -8,86 +10,109 @@ export default function init(userOptions: {
   text?: string;
   background?: string;
 }): void {
-  const config = { ...options, ...userOptions };
-  console.log(config);
-  const { container, fnAnchor, refAnchor, text, background } = config;
+  try {
+    const config = { ...options, ...userOptions };
+    console.log(config);
+    const { container, fnAnchor, refAnchor, text, background } = config;
 
-  const fnRE = new RegExp(`${fnAnchor}(\\d+)`, "g");
-  const refRE = new RegExp(`${refAnchor}(\\d+)`, "g");
+    const fnRe = new RegExp(`${fnAnchor}(\\d+)`, "g");
+    const refRe = new RegExp(`${refAnchor}(\\d+)`, "g");
+    const combinedRe = new RegExp(`(${fnAnchor}|${refAnchor})\\d+`);
+    console.log(combinedRe);
+    const article = document.querySelector(container);
 
-  const article = document.querySelector(container);
+    if (!article) throw Error("No container found.");
 
-  if (!article) throw Error("No container found.");
+    const containerSize = article?.querySelector("p")?.getBoundingClientRect();
 
-  const containerSize = article?.querySelector("p")?.getBoundingClientRect();
+    if (!containerSize) throw Error("Can't find container size");
 
-  if (!containerSize) throw Error("Can't find container size");
+    const { width, left, right } = containerSize;
 
-  const { width, left, right } = containerSize;
+    styles(text, background, width, left, right);
 
-  styles(text, background, width, left, right);
+    const ni = document.createNodeIterator(
+      article,
+      NodeFilter.SHOW_ELEMENT,
+      (node) => {
+        if (!node || !node.textContent) return NodeFilter.FILTER_REJECT;
+        return combinedRe.test(node.textContent)
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_REJECT;
+        // ACCEPT, REJECT OR SKIP based on
+        // custom criteria
+      }
+    );
 
-  if (!article) throw Error("Content container not found");
+    if (!ni.referenceNode) throw Error("Reference node not found");
 
-  const ni = document.createNodeIterator(article, NodeFilter.SHOW_TEXT);
+    let current;
+    let els = [];
 
-  if (!ni.referenceNode) throw Error("Reference node not found");
+    while ((current = ni.nextNode())) {
+      els.push(current);
+      // const parentEl = current;
+      // const str = current.textContent;
 
-  let current;
-  let count;
-  console.log(ni);
-  while ((current = ni.nextNode())) {
-    const parentEl = ni.referenceNode.parentElement;
+      // if (!parentEl) throw Error(`No parent element, ${current}`);
 
-    const str = ni.referenceNode.textContent;
+      // if (typeof str !== "string" || !str) throw Error("Nothing to match");
 
-    if (!parentEl) throw Error(`No parent el, ${current}`);
+      // createFn(fnRe, str, parentEl);
 
-    if (typeof str !== "string" || !str) throw Error("Nothing to match");
-
-    if (fnRE.test(str)) {
-      const transformedText = parentEl?.innerText.replace(
-        fnRE,
-        `<a class='footnote' id='$1' href='#ref-$1'>$1</a>`
-      );
-      parentEl.innerHTML = transformedText;
-      parentEl.setAttribute("style", "position:relative;");
+      // createRef(refRe, str, parentEl);
     }
 
-    if (refRE.test(str)) {
-      // Need to encode/decode html entities in config
-      const matches = str.match(refRE);
+    const notes = els.slice(1);
+    let fn: string[] = [],
+      ref: string[] = [];
+    notes.forEach((note) => {
+      const str = note.textContent;
+      const parentEl = note as HTMLElement;
 
-      if (!matches || !matches.length) throw Error("Couldn't find matches");
+      if (typeof str !== "string" || !str) throw Error("Nothing to match");
 
-      matches.forEach((match) => {
-        const number = /\d/.exec(match);
+      if (!parentEl) throw Error(`No parent element, ${note}`);
 
-        if (!number) throw Error("Couldn`t extract number");
+      let fnCheck = createFn(fnRe, str, parentEl);
 
-        const [num] = number;
+      fn = [...fn, ...fnCheck];
 
-        const outer = document.createElement("div");
-        outer.setAttribute("class", "reference-preview");
-        const inner = document.createElement("div");
-        inner.setAttribute("class", "reference-content");
+      let refCheck = createRef(refRe, str, parentEl);
+      ref = [...ref, ...refCheck];
+    });
 
-        inner.innerHTML = parentEl.innerHTML.replace(/&lt;&lt;(\d)/g, "$1 | ");
-        outer.append(inner);
+    if (fn.length !== ref.length) {
+      const [max, min] = fn.length > ref.length ? [fn, ref] : [ref, fn];
 
-        document.getElementById(num)?.append(outer);
-      });
+      const missing = max.filter((val) => !min.includes(val)).join(", ");
 
-      const transformedText = parentEl.innerHTML.replaceAll(
-        /&lt;&lt;(\d)/g,
-        "$1. "
-      );
-      const num = transformedText[0];
-      parentEl.id = `ref-${num}`;
-
-      parentEl.innerHTML = `${transformedText} <a href="#${num}">⮌</a>`;
+      const errorMessage = (
+        fn: string[],
+        ref: string[],
+        missing: string
+      ): string => {
+        return `It looks like there are more ${
+          fn.length > ref.length
+            ? "footnotes (" +
+              fn.length +
+              ")" +
+              " than references (" +
+              ref.length +
+              ")"
+            : "references (" +
+              ref.length +
+              ")" +
+              " than footnotes (" +
+              fn.length +
+              ")"
+        }. Check ${
+          fn.length > ref.length ? "footnote(s)" : "reference(s)"
+        } ${missing}`;
+      };
+      throw Error(errorMessage(fn, ref, missing));
     }
-
-    console.log(current);
+  } catch (e) {
+    console.error(e);
   }
 }
