@@ -16,7 +16,7 @@ export default function createRef(
 
     const number = /\d+/.exec(str);
 
-    if (!number) throw Error("Couldn`t extract number");
+    if (!number) throw Error("Couldn`t extract number for reference");
 
     const [num] = number;
 
@@ -26,5 +26,6 @@ export default function createRef(
 
     return [num.toString()];
   }
+
   return [];
 }
